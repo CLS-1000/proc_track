@@ -199,6 +199,8 @@ RULES: list[tuple[str, str, Optional[str], dict]] = [
     ("subsequent_referral_denied", r"[Rr]escind[^.]*subsequent referral[^.]*denied[^.]*", None, {}),
     ("referral_rescinded_reref",    r"[Rr]eferral rescinded by order[^.]*", "committee", {}),
     ("subseq_referral_resc_denied", r"[Ss]ubsequent referral rescission denied[^.]*", None, {}),
+    # Third phrasing of the same order; "[Rr]escind" does not reach "Rescission". (SB579, 2023R1)
+    ("rescission_subsequent_referral_denied", r"Rescission of the subsequent referral denied[^.]*", None, {}),
     ("subsequent_referral_resc",   r"[Ss]ubsequent referral[^.]*rescinded[^.]*", None, {"subsequent_referral": "rescinded"}),
     ("amendments_distributed",     r"\(Amendments distributed\.?\)",     None, {}),
     ("at_desk_adjournment",        r"At ((President's|Speaker's) desk|Desk) upon adjournment", None, {"location": "desk"}),
