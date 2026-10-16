@@ -47,11 +47,47 @@ def odata(entity: str, filt: str, select: str | None = None, top: int | None = N
         return json.loads(r.read())["value"]
 
 
+# Source-data errors, corrected by row and documented. Each entry is one OLIS row whose
+# recorded value is provably wrong from the row itself; the correction never touches
+# the graph. Applied when rows are loaded, before sorting, and stamped into the
+# measure's payload as `data_corrections` so the evidence record shows it.
+DATA_CORRECTIONS: dict[tuple[str, int], dict] = {
+    # HB2998 (2019R1) "Second reading." in the Senate. ActionDate 2019-06-30T19:02:00 is
+    # after Senate passage (06-30 12:24), but the row was created 2019-06-29T19:03:09 and
+    # its id sits between the 06-29 18:56 and 06-30 12:24 rows. Occurred 06-29 19:02;
+    # the ActionDate is one day late. Only floor-action row of this shape in ~103k.
+    ("2019R1", 477922): {
+        "ActionDate": "2019-06-29T19:02:00",
+        "reason": "ActionDate one day after CreatedDate; id order and CreatedDate place it 06-29",
+    },
+}
+
+
+def apply_corrections(rows: list[dict]) -> list[dict]:
+    out = []
+    for r in rows:
+        fix = DATA_CORRECTIONS.get((r.get("SessionKey"), r.get("MeasureHistoryId")))
+        if fix is None:
+            out.append(r)
+            continue
+        fixed = dict(r)
+        fixed["ActionDate"] = fix["ActionDate"]
+        fixed["DataCorrection"] = {
+            "MeasureHistoryId": r["MeasureHistoryId"],
+            "field": "ActionDate",
+            "recorded": r["ActionDate"],
+            "corrected": fix["ActionDate"],
+            "reason": fix["reason"],
+        }
+        out.append(fixed)
+    return out
+
+
 def measure_history(session: str, prefix: str, number: int) -> list[dict]:
-    rows = odata(
+    rows = apply_corrections(odata(
         "MeasureHistoryActions",
         f"SessionKey eq '{session}' and MeasurePrefix eq '{prefix}' and MeasureNumber eq {number}",
-    )
+    ))
     # ActionDate is the only defensible sort key: MeasureHistoryId contradicts it
     # (observed: id 654676 @08:33 precedes id 654677 @08:32 in SB976 2025R1).
     rows.sort(key=lambda r: (r["ActionDate"], r["MeasureHistoryId"]))
@@ -391,6 +427,8 @@ def replay(measure_id: str, rows: list[dict]):
     item = Item(measure_id)
     uncovered = []
     for r in rows:
+        if "DataCorrection" in r:
+            item.payload.setdefault("data_corrections", []).append(r["DataCorrection"])
         emits, gaps = parse_row(r["ActionText"])
         uncovered.extend(gaps)
         if not emits:

@@ -25,7 +25,7 @@ def load(session):
     path = os.path.join(CACHE, f"{session}.json")
     if not os.path.exists(path):
         sys.exit(f"no cache for {session} — run: python scripts/fetch_session.py {session}")
-    rows = json.load(open(path))
+    rows = h.apply_corrections(json.load(open(path)))
     by = collections.defaultdict(list)
     for r in rows:
         by[f"{r['MeasurePrefix']}{r['MeasureNumber']}"].append(r)
