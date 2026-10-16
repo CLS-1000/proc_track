@@ -146,6 +146,10 @@ RULES: list[tuple[str, str, Optional[str], dict]] = [
     ("motion_postpone",            r"Motion to pos[tp]one[^.]*",         None, {"postponed": True}),
     ("motion_postpone",            r"Motion to pos[tp]one[^.]*",         None, {"postponed": True}),
     ("motion_postpone",            r"Motion to pos[tp]one[^.]*",         None, {"postponed": True}),
+    # Must sit above motion_carried_generic: both span the same text, and on a tie the
+    # earlier rule wins. Requires "carried" so a failed tabling motion is not a tabling.
+    # (SB721 2021R1; SB5506 2023R1; SB302, SB736, SB976, SB1047 2025R1)
+    ("motion_to_table",            r"Motion to lay bill[^.]*on the table carried[^.]*", "tabled", {}),
     ("motion_carried_generic",     r"Motion to [^.]*carried[^.]*",      None, {"motion_carried": True}),
     # "Motion to take and place ... Motion failed." -- a failed motion, not a failed
     # measure. Longest match beats "failed". (SB554, 2021R1)
@@ -157,7 +161,6 @@ RULES: list[tuple[str, str, Optional[str], dict]] = [
     ("carried_by",                 r"Carried by ([^.]+)",               None, {"carried_by": r"\1"}),
     ("carried_over",               r"Carried [Oo]ver to [^.]+",         None, {"carried_over": True}),
     ("vote_explanation",           r"Vote explanation[^.]*",  None, {}),
-    ("motion_to_table",            r"Motion to lay bill.*on the table", "tabled", {}),
     ("withdrawn_committee",        r"[Ww]ithdrawn from committee",      "committee", {}),
 
     # --- executive / post-passage ----------------------------------------
