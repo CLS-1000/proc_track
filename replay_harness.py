@@ -330,6 +330,14 @@ CONTEXTUAL_STATE = {
     ("enacted_line_item_veto", "veto_sustained"): "line_item_veto_sustained",
 }
 
+# Rows that are events at a given position, not transitions. Tabling the Governor's
+# message on a line-item-vetoed law disposes of the message (the struck items stay
+# struck); the measure is still law. It is recorded in history with no state change.
+# (SB5506, 2023R1: tabled 2024-02-05, veto sustained 2024-03-07)
+CONTEXTUAL_EVENT = {
+    ("enacted_line_item_veto", "tabled"): "line_item_veto_message_tabled",
+}
+
 
 class Halt(Exception):
     pass
@@ -351,6 +359,13 @@ class Item:
 
 def step(item: Item, to_state: str, chamber: str, occurred_at: str, rule_id: str, payload: dict):
     frm = item.states.get(chamber)
+    event = CONTEXTUAL_EVENT.get((frm, to_state))
+    if event is not None:
+        item.chamber = chamber
+        item.payload.update(payload)
+        item.payload[event] = True
+        item.history.append((occurred_at, chamber, frm, frm, f"{rule_id}:{event}"))
+        return
     to_state = CONTEXTUAL_STATE.get((frm, to_state), to_state)
     # crossover: origin chamber passed -> second chamber introduction is legal
     if frm is None and to_state == "introduced":
