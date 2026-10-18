@@ -35,7 +35,7 @@ COVERAGE_FLOOR = 100.0      # percent of measures that must replay
 SWAP_FLOOR = 14.0           # percent of adjacent-swapped histories rejected
 SAMPLE = 400
 # leftover text pieces across all replayed rows, per session (2026-10-18)
-UNCLAIMED_CEILING = {"2019R1": 1216, "2021R1": 997, "2023R1": 1125, "2025R1": 1138}
+UNCLAIMED_CEILING = {"2019R1": 1216, "2021R1": 997, "2023R1": 1123, "2025R1": 1138}
 
 
 def main(session="2025R1"):

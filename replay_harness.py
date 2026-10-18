@@ -205,6 +205,11 @@ RULES: list[tuple[str, str, Optional[str], dict]] = [
     ("filed_sos",                  r"Filed with Secretary of State",    None, {"filed_sos": True}),
     ("chapter_number",             r"Chapter (\d+)[^.]*Laws",            None, {"chapter": r"\1"}),
     ("filed_without_signature", r"Filed without Governor.s signature", "enacted", {}),
+    # Same event, longer wording. Without this, filed_sos claimed the row and the
+    # "without Governor's signature" half was dropped: HB2689 and HB3440 (2023R1)
+    # became law but replayed as signed_by_presiding.
+    ("filed_sos_without_signature", r"Filed with Secretary of State without Governor.s signature",
+                                                                        "enacted", {"filed_sos": True}),
     ("effective_date",             r"Effective date[^.]*",              None, {}),
     ("effective_91st_day",         r"[Ee]ffective on the \d+\w* day[^.]*", None, {}),
     ("subsequent_referral_denied", r"[Rr]escind[^.]*subsequent referral[^.]*denied[^.]*", None, {}),
