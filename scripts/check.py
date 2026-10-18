@@ -9,6 +9,13 @@ Enforces the two invariants that make this project meaningful:
      still replay. A dropped measure means a rule you added is greedy and is
      swallowing a real transition out of a longer row.
 
+  3. UNCLAIMED TEXT must not grow. A row that matches one rule but carries
+     other words no rule claimed passes those words through silently (e.g.
+     "Filed with Secretary of State without Governor's signature" matched only
+     the filing). Until every leftover is claimed and replay can halt on
+     them, the per-session count is a ceiling: lower it as rules claim text,
+     never raise it.
+
   2. FALSE-ACCEPT must not regress. Adjacent-swap rejection must stay at or
      above the recorded floor. If coverage held but swap rejection fell, you
      widened the transition graph to paper over a mapping bug. Fix the rule
@@ -27,6 +34,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 COVERAGE_FLOOR = 100.0      # percent of measures that must replay
 SWAP_FLOOR = 14.0           # percent of adjacent-swapped histories rejected
 SAMPLE = 400
+# leftover text pieces across all replayed rows, per session (2026-10-18)
+UNCLAIMED_CEILING = {"2019R1": 1216, "2021R1": 997, "2023R1": 1125, "2025R1": 1138}
 
 
 def main(session="2025R1"):
@@ -37,9 +46,10 @@ def main(session="2025R1"):
 
     _, by = load(session)
 
-    completed, halts = 0, collections.Counter()
+    completed, halts, unclaimed = 0, collections.Counter(), 0
     for mid, mrows in by.items():
-        _item, halt, _gaps = h.replay(mid, mrows)
+        _item, halt, gaps = h.replay(mid, mrows)
+        unclaimed += len(gaps)
         if halt:
             halts[halt.split("  [")[0]] += 1
         else:
@@ -70,6 +80,13 @@ def main(session="2025R1"):
         ok &= passed
         detail = f" ({completed}/{len(by)})" if label == "coverage" else ""
         print(f"  [{'PASS' if passed else 'FAIL'}] {label}: {value:.1f}%{detail} (floor {floor}%)")
+    ceiling = UNCLAIMED_CEILING.get(session)
+    if ceiling is None:
+        print(f"  [INFO] unclaimed text pieces: {unclaimed} (no ceiling recorded)")
+    else:
+        passed = unclaimed <= ceiling
+        ok &= passed
+        print(f"  [{'PASS' if passed else 'FAIL'}] unclaimed text pieces: {unclaimed} (ceiling {ceiling})")
     if real_rejected:
         ok = False
         print(f"  [FAIL] {real_rejected} real histories rejected — must be 0")
