@@ -17,18 +17,19 @@ validation can be trusted.
 
 ## Results
 
-Four regular sessions, about 103,000 action rows, 11,723 measures, 120 mapping
+Four regular sessions, about 103,000 action rows, 11,723 measures, 97 mapping
 rules.
 
 | session | action rows | measures replayed | adjacent-swap rejection | gate |
 |---|---|---|---|---|
 | 2025R1 | 27,488 | 3,466 / 3,466 | 15.5% | pass |
 | 2021R1 | 24,568 | 2,519 / 2,519 | 19.8% | pass |
-| 2019R1 | 25,563 | 2,767 / 2,768 | 16.8% | 1 open halt |
-| 2023R1 | 25,844 | 2,969 / 2,970 | 12.8% | 1 open halt, swap below floor |
+| 2019R1 | 25,563 | 2,768 / 2,768 | 16.8% | pass (1 documented data correction) |
+| 2023R1 | 25,844 | 2,970 / 2,970 | 12.5% | swap below floor |
 
-The two open halts are listed under **Known issues**. They are reported rather
-than hidden because the point of the tool is that nothing passes silently.
+The 2023R1 shortfall and the 2019R1 correction are listed under **Known
+issues**. They are reported rather than hidden because the point of the tool is
+that nothing passes silently.
 
 ### Why two numbers
 
@@ -48,7 +49,7 @@ makes the coverage number mean something.
 ## Run it
 
 ```bash
-git clone https://github.com/ominous-22/proc_track && cd proc_track
+git clone https://github.com/CLS-1000/proc_track && cd proc_track
 make replay     # coverage + ranked halt reasons, 2025R1 (cached, no network)
 make perturb    # false-accept measurement
 make check      # the gate: exits nonzero on any regression
@@ -67,14 +68,16 @@ python replay_harness.py --session 2025R1 --measures SB976
 ## How it works
 
 1. **Fetch** — page Oregon's OData `MeasureHistoryActions` into a local cache.
-2. **Map** — match each action row against 120 regex rules using span offsets
+2. **Map** — match each action row against 97 regex rules using span offsets
    over the whole row. A row can emit several events. Overlaps resolve
    longest-match-wins, and every emitted event carries `(rule_id, start, end)`
    so any state can be traced back to the exact characters that produced it.
 3. **Validate** — step each event through a per-chamber transition graph.
    Unrecognized text or an illegal move halts the replay (fail closed).
 4. **Measure** — `bulk_replay` ranks halts and unmatched text fragments;
-   `perturbation_test` measures false acceptance; `check` enforces both floors.
+   `perturbation_test` measures false acceptance; `check` enforces the coverage
+   and swap-rejection floors and a per-session ceiling on action text that no
+   rule claimed.
 
 ## Things the data forced
 
@@ -106,12 +109,13 @@ mapping bug — fix the rule, not the graph.
 
 ## Known issues
 
-- **2019R1:** one measure halts on `S: passed -> second_reading`. Two graph edges
-  that let it pass were removed on purpose because they only existed for that
-  one bill (HB 2998) and weakened rejection everywhere else.
-- **2023R1:** one measure halts on an unmapped action ("Rescission of the
-  subsequent referral denied by Order of the President"), and adjacent-swap
-  rejection sits at 12.8%, under the 14% floor.
+- **2019R1:** HB 2998 replays only with one documented source fix. A Senate
+  "Second reading." row carries an `ActionDate` a day later than its
+  `CreatedDate` and its place in the id order; `DATA_CORRECTIONS` in
+  `replay_harness.py` records the original value, the corrected one and why,
+  and the corrected row carries a `DataCorrection` note.
+- **2023R1:** every measure replays, but adjacent-swap rejection is 12.5%,
+  under the 14% floor, so `make check SESSION=2023R1` fails.
 - Per-chamber flow graphs are derived for 2023R1 and 2025R1 only.
 
 ## Layout
@@ -127,3 +131,8 @@ schemas/                     derived chamber flows + draft Oregon YAML pack
 cache/                       four sessions of raw API data
 data/                        reference trajectory (SB 976) + action templates
 ```
+
+## Rights
+
+© EVASTARARCANA LLC. All rights reserved. This is not open source. Issues and
+data corrections are welcome; outside pull requests are not accepted.
