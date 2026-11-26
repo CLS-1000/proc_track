@@ -93,6 +93,7 @@ scripts/bulk_replay.py            coverage + ranked halts + uncovered fragments
 scripts/perturbation_test.py      false-accept measurement
 scripts/derive_chamber_flows.py   learn per-chamber graphs from the corpus
 scripts/check.py                  the gate — run before every commit
+scripts/export_chamber_flow.py    replay results as chamber_flow envelopes -> exports/
 ```
 
 ## Queued task
